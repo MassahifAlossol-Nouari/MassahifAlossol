@@ -16,6 +16,7 @@ const mushafs = [
     { name: "1️⃣ ورش بإشباع البدل مع الفتح",     id: "q7", path: "pdfs/warch3.pdf", startPage: 2 },
     { name: "1️⃣ ورش بإشباع البدل مع التقليل",     id: "q8", path: "pdfs/warch4.pdf", startPage: 2 },
     { name: "1️⃣ ورش من طريق الأصبهاني ",     id: "q9", path: "pdfs/asbahani.pdf", startPage: 2 },
+    
 
     { name: "2️⃣ قراءة ابن كثير",     id: "q10", path: "pdfs/ibnkatir.pdf", startPage: 2 },
     { name: "2️⃣ البزي",     id: "q11", path: "pdfs/bazzi.pdf", startPage: 2 },
@@ -199,28 +200,17 @@ function getRealPage(displayPage, startPage) {
     return displayPage + (startPage || 3) - 1;
 }
 
-//*function buildViewerUrl(pdfPath, realPage) {
-   // const baseUrl = "https://massahifalossol-nouari.github.io/MassahifAlossol/";
-  //  const fullPath = window.location.origin + '/' + pdfPath;
-  //  const fileName = pdfPath.split('/').pop(); // qalun1.pdf
-  //  const directUrl = `https://massahifalossol-nouari.github.io/MassahifAlossol/pdfs/${fileName}`;
- //   const encodedPath = encodeURIComponent(fullPath);
- //   return `pdfjs/web/viewer.html?file=${encodedPath}#page=${realPage}`;
-//}
 function buildViewerUrl(pdfPath, realPage) {
-    // 1. استخرج اسم ملف PDF من المسار القديم (مثل: "qalun1.pdf")
-    const fileName = pdfPath.split('/').pop();
-
-    // 2. قم ببناء المسار الصحيح والكامل لملف PDF على الخادم
-    //    لاحظ أنه تمت إضافة مجلد "MassahifAlossol/" بعد النطاق.
-    const correctPdfUrl = `https://massahifalossol-nouari.github.io/MassahifAlossol/pdfs/${fileName}`;
-
-    // 3. قم بترميز الرابط (URL Encoding) ليكون صالحاً للاستخدام
-    const encodedPath = encodeURIComponent(correctPdfUrl);
-
-    // 4. أعد بناء رابط عارض PDF.js مع الرابط المُصحّح
+    const baseUrl = "https://nouari-abdelkabir.github.io/MassahifAlossol/";
+    const fullPath = window.location.origin + '/' + pdfPath;
+    const fileName = pdfPath.split('/').pop(); // qalun1.pdf
+    const directUrl = `https://nouari-abdelkabir.github.io/MassahifAlossol/pdfs/${fileName}`;
+    const encodedPath = encodeURIComponent(fullPath);
     return `pdfjs/web/viewer.html?file=${encodedPath}#page=${realPage}`;
 }
+
+
+
 
 
 function savePage(page) { localStorage.setItem(PAGE_STORAGE, page); }
@@ -497,6 +487,8 @@ const audioFolderMap = {
     "q7": "warch3",
     "q8": "warch4",
     "q9": "asbahani",
+    // مصحف نافع له مجلد صوت خاص
+    "nafi": "nafi",  
     // ابن كثير
     "q10": "ibnkatir",
     "q11": "bazzi",
@@ -536,6 +528,7 @@ const audioFolderMap = {
     "q37": "khalaf10",
     "q38": "ishak",
     "q39": "idriss",
+   
 };
 
 // الحصول على مجلد الصوت حسب المصحف الحالي
@@ -573,6 +566,8 @@ function updateMiniProgress() {
     }
 }
 
+
+
 function playMiniAudio(pageNum) {
     if (!currentMushafId) {
         alert("الرجاء اختيار مصحف أولاً");
@@ -585,11 +580,17 @@ function playMiniAudio(pageNum) {
     }
     
     miniCurrentPage = pageNum;
-    const audioFolder = getCurrentAudioFolder();
     const pageStr = String(pageNum).padStart(3, '0');
-    const audioUrl = `audio/${audioFolder}/${pageStr}.mp3`;
     
-    console.log(`🎵 تشغيل: ${audioUrl} (المصحف: ${currentMushafId})`);
+    // تحديد مسار الصوت حسب المصحف
+    let audioUrl;
+    if (currentMushafId === "nafi") {
+        audioUrl = `audio/nafi/${pageStr}.mp3`;
+        console.log("🎵 تشغيل نافع:", audioUrl);
+    } else {
+        const audioFolder = getCurrentAudioFolder();
+        audioUrl = `audio/${audioFolder}/${pageStr}.mp3`;
+    }
     
     miniAudio = new Audio(audioUrl);
     miniAudio.volume = miniVolume;
@@ -600,7 +601,7 @@ function playMiniAudio(pageNum) {
     miniAudio.addEventListener('ended', () => {
         isMiniPlaying = false;
         updateMiniUI(false, pageNum);
-        if (pageNum < 640) {
+        if (pageNum < 604) {
             goToPage(pageNum + 1);
             setTimeout(() => playMiniAudio(pageNum + 1), 500);
         } else {
@@ -609,8 +610,8 @@ function playMiniAudio(pageNum) {
     });
     
     miniAudio.addEventListener('error', () => {
-        console.error(`❌ خطأ: الملف غير موجود ${audioUrl}`);
-        alert(`⚠️ لا توجد تلاوة للصفحة ${pageNum} في هذه الرواية`);
+        console.error(`❌ خطأ: ${audioUrl}`);
+        alert(`⚠️ لا توجد تلاوة للصفحة ${pageNum}`);
         miniPlayer.classList.add('hidden');
         isMiniPlaying = false;
         updateMiniUI(false, pageNum);
@@ -1041,3 +1042,74 @@ prevPage = function() {
 };
 
 console.log("✅ نظام التخزين المؤقت للصفحات جاهز");
+
+// ============================================
+// صوت مصحف نافع - حل بسيط ومباشر
+// ============================================
+
+// تعديل دالة playMiniAudio فقط
+const originalPlayNafiAudio = playMiniAudio;
+playMiniAudio = function(pageNum) {
+    // معرفة إذا كان المصحف الحالي هو نافع (حتى في وضع المقارنة)
+    let isNafi = false;
+    
+    // التحقق من القائمة الجانبية
+    if (currentMushafId === "nafi") isNafi = true;
+    
+    // التحقق من وضع المقارنة
+    const compareSplit = document.querySelector('.compare-split');
+    if (compareSplit) {
+        const labels = compareSplit.querySelectorAll('.compare-label');
+        for (let i = 0; i < labels.length; i++) {
+            if (labels[i].textContent.includes('نافع')) {
+                isNafi = true;
+                break;
+            }
+        }
+    }
+    
+    if (isNafi) {
+        if (miniAudio) {
+            miniAudio.pause();
+            miniAudio = null;
+        }
+        
+        const pageStr = String(pageNum).padStart(3, '0');
+        const audioUrl = `audio/nafi/${pageStr}.mp3`;
+        console.log("🎵 تشغيل نافع:", audioUrl);
+        
+        miniAudio = new Audio(audioUrl);
+        miniAudio.volume = miniVolume;
+        
+        miniAudio.addEventListener('timeupdate', updateMiniProgress);
+        miniAudio.addEventListener('loadedmetadata', updateMiniProgress);
+        
+        miniAudio.addEventListener('ended', () => {
+            isMiniPlaying = false;
+            updateMiniUI(false, pageNum);
+            if (pageNum < 604) {
+                goToPage(pageNum + 1);
+                setTimeout(() => playMiniAudio(pageNum + 1), 500);
+            } else {
+                miniPlayer.classList.add('hidden');
+            }
+        });
+        
+        miniAudio.addEventListener('error', () => {
+            alert(`⚠️ لا توجد تلاوة للصفحة ${pageNum} في مصحف نافع`);
+            miniPlayer.classList.add('hidden');
+            isMiniPlaying = false;
+            updateMiniUI(false, pageNum);
+        });
+        
+        miniAudio.play();
+        isMiniPlaying = true;
+        updateMiniUI(true, pageNum);
+        miniPlayer.classList.remove('hidden');
+        return;
+    }
+    
+    // باقي المصاحف
+    originalPlayNafiAudio(pageNum);
+};
+
